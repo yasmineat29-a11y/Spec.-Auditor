@@ -3,61 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spec Matcher</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <title>Spec Matcher Pro</title>
+    <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .container { max-width: 600px; margin: auto; }
-        #results { margin-top: 20px; }
-        .match { background: #e7f3ff; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; background-color: #f4f7f6; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #333; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border: 2px dashed #ccc; border-radius: 8px; box-sizing: border-box; }
+        .match { background: #e3f2fd; padding: 12px; margin-bottom: 8px; border-left: 5px solid #2196f3; border-radius: 4px; font-size: 14px; }
+        .page-badge { background: #2196f3; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>Specification Matcher</h2>
+    <h2>Spec Matcher</h2>
     <input type="file" id="pdfUpload" accept="application/pdf">
     <div id="results"></div>
 </div>
 
 <script>
-    // Set worker path
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
 
-    const HEADLINES = ["Scope", "Materials", "Installation", "Warranty", "Compliance"];
+    // Regex patterns: "i" means case-insensitive
+    const TARGETS = [
+        { name: "Scope", regex: /Scope/i },
+        { name: "Materials", regex: /Material/i },
+        { name: "Installation", regex: /Install/i },
+        { name: "Warranty", regex: /Warrant/i },
+        { name: "Compliance", regex: /Complian/i }
+    ];
 
     document.getElementById('pdfUpload').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = "Processing...";
+        resultsDiv.innerHTML = "<em>Analyzing pages... please wait.</em>";
 
         const reader = new FileReader();
         reader.onload = async function() {
-            try {
-                const typedarray = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                let fullText = "";
-                
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    fullText += textContent.items.map(s => s.str).join(" ");
-                }
+            const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+            resultsDiv.innerHTML = "<h3>Results:</h3>";
+            
+            let foundCount = 0;
 
-                resultsDiv.innerHTML = "<h3>Found Clauses:</h3>";
-                let foundAny = false;
-                HEADLINES.forEach(h => {
-                    if (fullText.toLowerCase().includes(h.toLowerCase())) {
-                        resultsDiv.innerHTML += `<div class="match">✅ Found: <strong>${h}</strong></div>`;
-                        foundAny = true;
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(s => s.str).join(" ");
+
+                TARGETS.forEach(t => {
+                    if (t.regex.test(pageText)) {
+                        resultsDiv.innerHTML += `
+                            <div class="match">
+                                ✅ <strong>${t.name}</strong> 
+                                <span class="page-badge">Page ${i}</span>
+                            </div>`;
+                        foundCount++;
                     }
                 });
-                if (!foundAny) resultsDiv.innerHTML += "<p>No matching headlines found.</p>";
-            } catch (err) {
-                console.error(err);
-                resultsDiv.innerHTML = "Error processing PDF. Check Console.";
             }
+            if (foundCount === 0) resultsDiv.innerHTML += "<p>No matches found.</p>";
         };
         reader.readAsArrayBuffer(file);
     });
