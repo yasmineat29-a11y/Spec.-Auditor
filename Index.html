@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spec Matcher</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .container { max-width: 600px; margin: auto; }
+        input, button { width: 100%; padding: 10px; margin-top: 10px; }
+        #results { margin-top: 20px; border-top: 1px solid #ccc; }
+        .match { background: #e7f3ff; padding: 10px; margin: 5px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Specification Matcher</h2>
+    <input type="file" id="pdfUpload" accept="application/pdf">
+    <div id="results"></div>
+</div>
+
+<script>
+    const HEADLINES = ["Scope", "Materials", "Installation", "Warranty", "Compliance"];
+
+    document.getElementById('pdfUpload').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = async function() {
+            const typedarray = new Uint8Array(this.result);
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            let fullText = "";
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(s => s.str).join(" ");
+            }
+
+            // Simple matching
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = "<h3>Found Clauses:</h3>";
+            HEADLINES.forEach(h => {
+                if (fullText.toLowerCase().includes(h.toLowerCase())) {
+                    resultsDiv.innerHTML += `<div class="match">✅ Found: <strong>${h}</strong></div>`;
+                }
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    });
+</script>
+</body>
+</html>
