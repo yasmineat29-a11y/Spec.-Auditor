@@ -20,7 +20,7 @@ uploadBtn.addEventListener('change', async (e) => {
         console.log("Processing PDF...");
         try {
             const typedarray = new Uint8Array(this.result);
-            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
             const page = await pdf.getPage(1);
             const content = await page.getTextContent();
             
