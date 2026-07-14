@@ -1,0 +1,13 @@
+body { background: #f0f0f0; display: flex; justify-content: center; padding-top: 50px; }
+
+.notebook {
+    width: 600px; height: 800px;
+    background: white;
+    background-image: repeating-linear-gradient(transparent, transparent 30px, #ccc 30px, #ccc 31px);
+    border: 1px solid #999;
+    padding: 40px;
+    font-family: 'Dancing Script', cursive; /* Use a Google Font */
+    font-size: 24px;
+    line-height: 31px;
+    color: #333;
+}
