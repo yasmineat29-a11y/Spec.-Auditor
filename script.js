@@ -2,11 +2,14 @@ import * as pdfjsLib from 'https://mozilla.github.io/pdf.js/build/pdf.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.mjs';
 
 let pdfText = "";
+let startX, startY;
+let mode = null; // null, 'reveal', or 'navigate'
+
 const output = document.getElementById('handwriting-output');
 const notebook = document.getElementById('notebook');
 const uploadBtn = document.getElementById('pdf-upload');
 
-// 3. Handle PDF upload
+// 1. Process PDF
 uploadBtn.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -18,39 +21,48 @@ uploadBtn.addEventListener('change', async (e) => {
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            // Sort by vertical position
             const sortedItems = content.items.sort((a, b) => b.transform[5] - a.transform[5]);
             fullText += sortedItems.map(item => item.str).join("") + "\n";
         }
         pdfText = fullText;
         output.textContent = "";
-        alert("PDF Processed!");
+        alert("PDF Ready!");
     };
     reader.readAsArrayBuffer(file);
 });
 
-// 4. Scrape logic
-let isScraping = false;
-
+// 2. Gesture Detection
 notebook.addEventListener('touchstart', (e) => {
-    // Only scrape if exactly 1 finger
-    if (e.touches.length === 1) {
-        isScraping = true;
-    } else {
-        isScraping = false;
-    }
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    mode = null; 
 }, { passive: false });
 
 notebook.addEventListener('touchmove', (e) => {
-    if (isScraping && e.touches.length === 1) {
-        e.preventDefault(); // Stop scrolling ONLY for one finger
-        
-        const rect = notebook.getBoundingClientRect();
-        const relativeY = e.touches[0].clientY - rect.top + notebook.scrollTop;
-        const progress = Math.min(Math.max(relativeY / notebook.scrollHeight, 0), 1);
-        
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const dx = currentX - startX;
+    const dy = currentY - startY;
+
+    // Determine mode based on first movement
+    if (!mode) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+            mode = 'reveal'; // Horizontal movement
+        } else {
+            mode = 'navigate'; // Vertical movement
+        }
+    }
+
+    if (mode === 'reveal') {
+        e.preventDefault();
+        // Reveal text based on how far right you've swiped
+        const progress = Math.min(Math.max(dx / notebook.clientWidth, 0), 1);
         const index = Math.floor(progress * pdfText.length);
         output.textContent = pdfText.substring(0, index);
-    } 
-    // If e.touches.length > 1, we do NOTHING, letting browser handle scroll
+    }
+    // If mode === 'navigate', we do nothing, letting default scroll happen
 }, { passive: false });
+
+notebook.addEventListener('touchend', () => {
+    mode = null; // Reset when finger is removed
+});
