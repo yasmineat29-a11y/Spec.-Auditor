@@ -20,8 +20,8 @@ body {
     overflow-y: auto;
     
     /* Crucial for multi-finger vs scrape logic */
-    touch-action: pan-y; 
-    user-select: none;
+    touch-action: pan-y; /* Allows vertical scrolling by default */
+    overflow-y: auto;
     
     /* Font styles */
     font-family: 'Patrick Hand', cursive; 
