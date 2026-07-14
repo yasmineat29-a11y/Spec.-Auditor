@@ -8,7 +8,7 @@ const output = document.getElementById('handwriting-output');
 const notebook = document.getElementById('notebook');
 const uploadBtn = document.getElementById('pdf-upload');
 
-// 3. Handle PDF file selection and extraction (Single, clean version)
+// 3. Handle PDF file selection and extraction
 uploadBtn.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -20,7 +20,10 @@ uploadBtn.addEventListener('change', async (e) => {
         console.log("Processing PDF...");
         try {
             const typedarray = new Uint8Array(this.result);
-            const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+            
+            // FIX IS HERE: Wrapped typedarray in { data: ... }
+            const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise; 
+            
             const page = await pdf.getPage(1);
             const content = await page.getTextContent();
             
