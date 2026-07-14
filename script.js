@@ -25,9 +25,19 @@ uploadBtn.addEventListener('change', async (e) => {
             const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise; 
             
             const page = await pdf.getPage(1);
-            const content = await page.getTextContent();
-            
-            pdfText = content.items.map(item => item.str).join(" ");
+            // Replace your extraction logic with this:
+const content = await page.getTextContent();
+
+// Sort by vertical position (y) first, then horizontal (x)
+const sortedItems = content.items.sort((a, b) => {
+    // If y-positions are close (same line), sort by x (left to right)
+    if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
+        return a.transform[4] - b.transform[4];
+    }
+    // Otherwise, sort by y (top to bottom)
+    return b.transform[5] - a.transform[5];
+});
+
             console.log("Text successfully extracted:", pdfText.substring(0, 50) + "...");
             alert("File processed! Touch the notebook to write.");
         } catch (error) {
