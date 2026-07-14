@@ -1,22 +1,73 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>InkFlow</title>
-</head>
-<body>
-    <div class="controls">
-        <input type="file" id="pdf-upload" accept="application/pdf">
-        <p>Upload a PDF, then touch the notebook to write.</p>
-    </div>
-    
-    <div class="notebook" id="notebook">
-        <div id="handwriting-output"></div>
-    </div>
+// 1. Import PDF.js
+import * as pdfjsLib from 'https://mozilla.github.io/pdf.js/build/pdf.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.mjs';
 
-    <!-- Load PDF.js from CDN -->
-    <script src="https://mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
-    <script src="script.js" type="module"></script>
-</body>
-</html>
+// 2. State variables
+let pdfText = "";
+let isWriting = false; 
+let currentIndex = 0; // Tracks progress to allow pause/resume
+const output = document.getElementById('handwriting-output');
+const notebook = document.getElementById('notebook');
+const uploadBtn = document.getElementById('pdf-upload');
+
+// 3. Handle PDF file selection
+uploadBtn.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function() {
+        try {
+            const typedarray = new Uint8Array(this.result);
+            const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+            
+            let fullText = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                const sortedItems = content.items.sort((a, b) => b.transform[5] - a.transform[5]);
+                fullText += sortedItems.map(item => item.str).join(" ") + " ";
+            }
+            
+            pdfText = fullText;
+            currentIndex = 0; // Reset index on new file
+            output.innerHTML = "";
+            alert("File processed! Touch the notebook to start, pause, or resume.");
+        } catch (error) {
+            alert("Error processing PDF: " + error.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+// 4. Animation function with Pause/Resume control
+function startWriting() {
+    if (!pdfText) return;
+
+    if (isWriting) {
+        isWriting = false; // Pause
+        return;
+    }
+
+    isWriting = true; // Resume/Start
+    
+    function type() {
+        if (currentIndex < pdfText.length && isWriting) {
+            output.innerHTML += pdfText.charAt(currentIndex);
+            currentIndex++;
+            notebook.scrollTop = notebook.scrollHeight;
+            setTimeout(type, 30); 
+        } else {
+            isWriting = false;
+        }
+    }
+    type();
+}
+
+// 5. Trigger events
+notebook.addEventListener('touchstart', (e) => {
+    e.preventDefault(); 
+    startWriting();
+}, { passive: false });
+
+notebook.addEventListener('click', startWriting);
