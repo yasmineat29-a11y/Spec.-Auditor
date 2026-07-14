@@ -3,13 +3,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build
 
 let pdfText = "";
 let startX, startY;
-let mode = null; // null, 'reveal', or 'navigate'
+let mode = null; 
+let baseIndex = 0; // The index where we started the swipe
+let currentIndex = 0;
 
 const output = document.getElementById('handwriting-output');
 const notebook = document.getElementById('notebook');
 const uploadBtn = document.getElementById('pdf-upload');
 
-// 1. Process PDF
+// 1. Process PDF (Same as before)
 uploadBtn.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -25,8 +27,9 @@ uploadBtn.addEventListener('change', async (e) => {
             fullText += sortedItems.map(item => item.str).join("") + "\n";
         }
         pdfText = fullText;
+        currentIndex = 0;
         output.textContent = "";
-        alert("PDF Ready!");
+        alert("PDF Ready! Swipe right to reveal, drag up/down to navigate.");
     };
     reader.readAsArrayBuffer(file);
 });
@@ -36,6 +39,7 @@ notebook.addEventListener('touchstart', (e) => {
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     mode = null; 
+    baseIndex = currentIndex; // Lock in the starting index
 }, { passive: false });
 
 notebook.addEventListener('touchmove', (e) => {
@@ -44,25 +48,28 @@ notebook.addEventListener('touchmove', (e) => {
     const dx = currentX - startX;
     const dy = currentY - startY;
 
-    // Determine mode based on first movement
+    // Determine mode
     if (!mode) {
-        if (Math.abs(dx) > Math.abs(dy)) {
-            mode = 'reveal'; // Horizontal movement
-        } else {
-            mode = 'navigate'; // Vertical movement
+        if (Math.abs(dx) > Math.abs(dy) + 10) { // Added threshold to avoid accidental triggers
+            mode = 'reveal';
+        } else if (Math.abs(dy) > 10) {
+            mode = 'navigate';
         }
     }
 
     if (mode === 'reveal') {
         e.preventDefault();
-        // Reveal text based on how far right you've swiped
-        const progress = Math.min(Math.max(dx / notebook.clientWidth, 0), 1);
-        const index = Math.floor(progress * pdfText.length);
-        output.textContent = pdfText.substring(0, index);
+        
+        // SENSITIVITY: 10 pixels moved = 1 character revealed
+        // Increase '10' to make it slower, decrease to make it faster
+        const revealSpeed = 10; 
+        const deltaIndex = Math.floor(dx / revealSpeed);
+        
+        currentIndex = Math.max(0, Math.min(baseIndex + deltaIndex, pdfText.length));
+        output.textContent = pdfText.substring(0, currentIndex);
     }
-    // If mode === 'navigate', we do nothing, letting default scroll happen
 }, { passive: false });
 
 notebook.addEventListener('touchend', () => {
-    mode = null; // Reset when finger is removed
+    mode = null;
 });
