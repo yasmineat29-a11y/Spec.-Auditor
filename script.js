@@ -40,31 +40,52 @@ uploadBtn.addEventListener('change', async (e) => {
     reader.readAsArrayBuffer(file);
 });
 
-// 4. Animation function with Pause/Resume control
-function startWriting() {
-    if (!pdfText) return;
+// ... keep your existing imports and PDF processing ...
 
-    if (isWriting) {
-        isWriting = false; 
-        return;
-    }
+// 4. Improved Animation & Navigation
+let animationTimeout = null;
 
-    isWriting = true; 
-    
-    function type() {
-        if (currentIndex < pdfText.length && isWriting) {
-            output.innerHTML += pdfText.charAt(currentIndex);
-            currentIndex++;
+function type() {
+    if (currentIndex < pdfText.length && isWriting) {
+        // Use textContent instead of innerHTML to prevent layout shifts/spacing issues
+        output.textContent = pdfText.substring(0, currentIndex + 1);
+        currentIndex++;
+        
+        // Auto-scroll logic: only scroll if the user isn't actively reading higher up
+        if (notebook.scrollHeight - notebook.scrollTop < notebook.clientHeight + 100) {
             notebook.scrollTop = notebook.scrollHeight;
-            setTimeout(type, 30); 
-        } else {
-            isWriting = false;
         }
+        
+        animationTimeout = setTimeout(type, 30); 
+    } else {
+        isWriting = false;
     }
-    type();
 }
 
-// 5. Trigger events
+function startWriting() {
+    if (!pdfText) return;
+    
+    if (isWriting) {
+        isWriting = false;
+        clearTimeout(animationTimeout); // Stop the loop
+    } else {
+        isWriting = true;
+        type();
+    }
+}
+
+// 5. Add a Scroll Listener to allow manual navigation
+notebook.addEventListener('scroll', () => {
+    // Optional: Calculate current index based on scroll position 
+    // to allow user to "jump" and resume from there
+    const percentage = notebook.scrollTop / (notebook.scrollHeight - notebook.clientHeight);
+    if (!isNaN(percentage)) {
+        currentIndex = Math.floor(percentage * pdfText.length);
+    }
+});
+
+
+// 6. Trigger events
 notebook.addEventListener('touchstart', (e) => {
     e.preventDefault(); 
     startWriting();
