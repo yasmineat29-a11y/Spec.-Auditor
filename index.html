@@ -9,7 +9,19 @@
     <div class="controls">
         <input type="file" id="pdf-upload" accept="application/pdf">
         <p>Upload a PDF, then touch the notebook to write.</p>
+
+<div class="controls">
+    <input type="file" id="pdf-upload" accept="application/pdf">
+    
+    <!-- Added Search Box -->
+    <div id="search-box">
+        <input type="text" id="search-input" placeholder="Jump to word...">
+        <button id="search-btn">Jump</button>
     </div>
+    
+    <p>Upload a PDF, then touch the notebook to write.</p>
+</div>
+
     
     <div class="notebook" id="notebook">
         <div id="handwriting-output"></div>
